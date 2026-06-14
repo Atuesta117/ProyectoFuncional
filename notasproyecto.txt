@@ -1,0 +1,40 @@
+------------------Funciones secuenciales ---------
+2.1.1 Implementando en Scala la funcion polarizacion comete
+  def min_p 
+  def rhoCMT_Gen 
+  def normalizar
+freddy alexader para el jueves en la noche 
+
+
+2.2.1 Implemente en Scala la funcion de polarizacion de una red (1)
+Jean 
+
+2.3.1 Implemente en eslaca la funcion de influencia (1)
+Yo
+
+
+2.3.2 implementando en Scala la funcion de actualizacion de una creencia de una red (1) 
+Jhonnier 
+
+2.3.3 Simulando la evolucion de ula polarizacion de una red (1)
+Jhonnier 
+
+
+
+
+----------------Paralelismo-----------------------
+paralelizar rhoPar 
+Paralelizar acltualizacion de una creencia 
+
+----------------Pruebas y comparaciones-----------
+Son 3 funciones para comparar
+
+
+
+---------------Rubricas sobre el codigo----------- 
+- manejo de recurcion
+- reconocimiento de patrones 
+- mecanismos de encapsulacion
+- funciones de alto orden 
+- iteradores
+
