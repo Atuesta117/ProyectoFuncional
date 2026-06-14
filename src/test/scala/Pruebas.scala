@@ -3,6 +3,9 @@ import Opinion._
 
 object Pruebas extends App {
 
+
+
+//-------------------Pruebas rho ------------------------
   //Funciones de creencias genericas de prueba
   // Build uniform belief state.
   def uniformBelief(nags: Int): SpecificBelief = {
@@ -94,4 +97,7 @@ object Pruebas extends App {
   rho1(sbmidly, dist2)
 
   println(rho2(sbmidly, dist2))
+//-----------------Fin Pruebas rho ------------------------
+
+
 }
