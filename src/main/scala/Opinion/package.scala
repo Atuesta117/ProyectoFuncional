@@ -59,7 +59,28 @@ package object Opinion {
       cometeNorm(dist)
     }
   }
+  // --------------------FUNCION DE INFLUENCIA----------------------------
 
+  type WeightedGraph = (Int, Int) => Double
+
+  type SpecificWeightedGraph =
+    (WeightedGraph, Int)
+
+  type GenericWeightedGraph =
+    Int => SpecificWeightedGraph
+
+  def showWeightedGraph(
+                         swg: SpecificWeightedGraph
+                       ): IndexedSeq[IndexedSeq[Double]] = {
+
+    val (wg, nags) = swg
+
+    Vector.tabulate(nags) { i =>
+      Vector.tabulate(nags) { j =>
+        wg(i, j)
+      }
+    }
+  }
 
 
 

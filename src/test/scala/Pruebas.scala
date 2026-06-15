@@ -99,5 +99,19 @@ object Pruebas extends App {
   println(rho2(sbmidly, dist2))
 //-----------------Fin Pruebas rho ------------------------
 
+  //-------------------Pruebas showWeightedGraph ------------------------
+
+  val grafoPrueba: SpecificWeightedGraph = (
+    (i: Int, j: Int) =>
+      if (i == j) 1.0
+      else if (i < j) 1.0 / (j - i).toDouble
+      else 0.0,
+    5
+  )
+
+  println("Prueba showWeightedGraph:")
+  showWeightedGraph(grafoPrueba).foreach(println)
+
+  //-----------------Fin Pruebas showWeightedGraph ------------------------
 
 }
