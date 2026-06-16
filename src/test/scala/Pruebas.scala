@@ -112,6 +112,57 @@ object Pruebas extends App {
   println("Prueba showWeightedGraph:")
   showWeightedGraph(grafoPrueba).foreach(println)
 
+
+def i1(nags: Int): SpecificWeightedGraph = {
+  ((i: Int, j: Int) =>
+    if (i == j) 1.0
+    else if (i < j) 1.0 / (j - i).toDouble
+    else 0.0,
+   nags)
+}
+
+def i2(nags: Int): SpecificWeightedGraph = {
+  ((i: Int, j: Int) =>
+    if (i == j) 1.0
+    else if (i < j) (j - i).toDouble / nags.toDouble
+    else (nags - (i - j)).toDouble / nags.toDouble,
+   nags)
+}
+
+// --- Instancias específicas para 10 y 20 agentes ---
+
+val i1_10 = i1(10)
+val i2_10 = i2(10)
+val i1_20 = i1(20)
+val i2_20 = i2(20)
+val res23 = showWeightedGraph(i1_10);
+val res25 = showWeightedGraph(i2_10)
+  println("Pruebas del enunciado")
+  res23.foreach(println)
+  println("---------------------------")
+  res25.foreach(println)
+println(res23);
+println(res25);
+
+
   //-----------------Fin Pruebas showWeightedGraph ------------------------
+  
+
+
+
+  //--------------------Inicio Pruebas confBiasUpdate----------------------
+  println("Pruebas de confBiasUpdate");
+  val sbu_10 = uniformBelief(10)
+  println(confBiasUpdate(sbu_10, i1_10))
+  println(rho1(sbu_10, dist1))
+  println(rho1(confBiasUpdate(sbu_10, i1_10), dist1))
+
+  val sbm_10 = midlyBelief(10)
+  println(confBiasUpdate(sbm_10, i1_10))
+  println(rho1(sbm_10, dist1))
+  println(rho1(confBiasUpdate(sbm_10, i1_10), dist1))
+  
+
+  //-------------------Fin Pruebas confBiasUpdate----------------------
 
 }

@@ -63,24 +63,57 @@ package object Opinion {
 
   type WeightedGraph = (Int, Int) => Double
 
-  type SpecificWeightedGraph =
-    (WeightedGraph, Int)
+  type SpecificWeightedGraph =(WeightedGraph, Int)
 
-  type GenericWeightedGraph =
-    Int => SpecificWeightedGraph
+  type GenericWeightedGraph = Int => SpecificWeightedGraph
 
-  def showWeightedGraph(
-                         swg: SpecificWeightedGraph
-                       ): IndexedSeq[IndexedSeq[Double]] = {
+  def showWeightedGraph(swg: SpecificWeightedGraph ): IndexedSeq[IndexedSeq[Double]] = {
 
     val (wg, nags) = swg
+    for{
+      i <- 0 until nags
+    } yield for {
+          j <- 0 until nags
+    } yield wg(i,j)
+  
+  }
 
-    Vector.tabulate(nags) { i =>
-      Vector.tabulate(nags) { j =>
-        wg(i, j)
-      }
+
+
+def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+  def valorABS(num: Double) ={
+    num match {
+      case num if num < 0 => -1 * num 
+      case num if num  > 0 => num 
+      case num if num == 0 => 0
     }
   }
+  val (wg, nags) = swg
+  (for {
+    i <- 0 until nags
+  } yield {
+    val Ai = for {
+      j <- 0 until nags  
+      if wg(j, i) > 0    
+    } yield j
+
+    val sumatoria = (for{
+      j <- Ai
+
+    }yield {
+      val creencia_I = b(i);
+      val creencia_J = b(j);
+      val conf_IJ = 1 - valorABS(creencia_J - creencia_I);
+      val influencia = wg(j,i);
+      conf_IJ * influencia* (b(j) - b(i));
+      
+    }).sum
+
+ val resultado = b(i) + (sumatoria / Ai.length)
+    resultado 
+  }).toVector
+}
+  
 
 
 
