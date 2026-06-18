@@ -81,36 +81,27 @@ package object Opinion {
 
 
 def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-  def valorABS(num: Double) ={
-    num match {
-      case num if num < 0 => -1 * num 
-      case num if num  > 0 => num 
-      case num if num == 0 => 0
-    }
-  }
   val (wg, nags) = swg
   (for {
     i <- 0 until nags
   } yield {
     val Ai = for {
-      j <- 0 until nags  
-      if wg(j, i) > 0    
+      j <- 0 until nags
+      if wg(j, i) > 0
     } yield j
 
-    val sumatoria = (for{
-      j <- Ai
-
-    }yield {
-      val creencia_I = b(i);
-      val creencia_J = b(j);
-      val conf_IJ = 1 - valorABS(creencia_J - creencia_I);
-      val influencia = wg(j,i);
-      conf_IJ * influencia* (b(j) - b(i));
-      
-    }).sum
-
- val resultado = b(i) + (sumatoria / Ai.length)
-    resultado 
+    Ai match {
+      case ai if ai.isEmpty => b(i)
+      case ai =>
+        val sumatoria = (for {
+          j <- ai
+        } yield {
+          val conf_IJ = 1 - math.abs(b(j) - b(i))
+          val influencia = wg(j, i)
+          conf_IJ * influencia * (b(j) - b(i))
+        }).sum
+        b(i) + (sumatoria / ai.length)
+    }
   }).toVector
 }
   

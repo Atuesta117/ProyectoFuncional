@@ -1,6 +1,6 @@
 import Comete._
 import Opinion._
-
+import common._
 object Pruebas extends App {
 
 
