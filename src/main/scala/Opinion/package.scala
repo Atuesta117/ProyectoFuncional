@@ -1,5 +1,5 @@
 import Comete._
-
+import common._
 
 package object Opinion {
 
@@ -102,30 +102,56 @@ package object Opinion {
   //   - for-comprehension: recorre cada agente i (iterador)
   //   - pattern matching: si Ai está vacío, la creencia no cambia
   //   - inmutabilidad: se construye un nuevo Vector, no se modifica b
-  def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-    val (wg, nags) = swg
-    (for {
-      i <- 0 until nags
-    } yield {
-      // Conjunto Ai: índices de agentes que influyen en i
-      val Ai = for {
-        j <- 0 until nags
+//Version paralela
+def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+
+  val (wg, nags) = swg
+
+  val is = (0 until nags).toVector
+  val js = (0 until nags).toVector
+
+  def calcNuevaCreencia(
+      i: Int,
+      b: SpecificBelief,
+      wg: WeightedGraph,
+      js: Vector[Int]
+  ): Double = {
+
+    val Ai =
+      for {
+        j <- js
         if wg(j, i) > 0
       } yield j
 
-      Ai match {
-        case ai if ai.isEmpty => b(i)
-        case ai =>
-          val sumatoria = (for {
-            j <- ai
-          } yield {
-            val beta_ij = 1 - math.abs(b(j) - b(i))
-            beta_ij * wg(j, i) * (b(j) - b(i))
-          }).sum
-          b(i) + sumatoria / ai.length
-      }
-    }).toVector
+    if (Ai.isEmpty) b(i)
+    else {
+      val sumatoria =
+        Ai.map { j =>
+          val beta_ij = 1 - math.abs(b(j) - b(i))
+          beta_ij * wg(j, i) * (b(j) - b(i))
+        }.sum
+
+      b(i) + sumatoria / Ai.length
+    }
   }
+
+  def aux(is: Vector[Int]): Vector[Double] = {
+
+    is match {
+
+      case Vector() =>
+        Vector.empty
+
+      case i +: resto =>
+        calcNuevaCreencia(i, b, wg, js) +:
+          aux(resto)
+    }
+  }
+
+  aux(is)
+}
+
+  
 
   // 2.3.3 — Simulación de la evolución de la polarización.
   //
@@ -156,4 +182,64 @@ package object Opinion {
 
   // -------------------- Fin 2.3.2 y 2.3.3 --------------------
 
+
+  //------------------2.4 Acelerando la simulacion con paralelismo de tareas y de datos---------------------
+
+  // 2.4.2 Paralelizando el caluclo de la actualizacion de una creencia --------------------
+  //confBiasUpdatePar
+  def confBiasUpdatePar(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+
+    val (wg, nags) = swg
+
+    val is = (0 until nags).toVector
+    val js = (0 until nags).toVector
+
+    def calcNuevaCreencia(
+                           i: Int,
+                           b: SpecificBelief,
+                           wg: WeightedGraph,
+                           js: Vector[Int]
+                         ): Double = {
+
+      val Ai =
+        for {
+          j <- js
+          if wg(j, i) > 0
+        } yield j
+
+      if (Ai.isEmpty) b(i)
+      else {
+        val sumatoria =
+          Ai.map { j =>
+            val beta_ij = 1 - math.abs(b(j) - b(i))
+            beta_ij * wg(j, i) * (b(j) - b(i))
+          }.sum
+
+        b(i) + sumatoria / Ai.length
+      }
+    }
+
+    def aux(is: Vector[Int]): Vector[Double] = {
+
+      val n = is.length
+      val m = n / 2
+
+      if (n == 0)
+        Vector.empty
+
+      else if (n == 1)
+        Vector(calcNuevaCreencia(is(0), b, wg, js))
+
+      else {
+        val (izq, der) = parallel(
+          aux(is.slice(0, m)),
+          aux(is.slice(m, n))
+        )
+
+        izq ++ der
+      }
+    }
+
+    aux(is)
+  }
 }
