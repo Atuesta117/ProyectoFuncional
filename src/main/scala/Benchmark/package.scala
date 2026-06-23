@@ -1,7 +1,10 @@
 import Comete.DistributionValues
 import Opinion._
 import org.scalameter._
+// Imports de Plotly para simEvolucion (gráficos de evolución de polarización).
+// element._ es necesario para usar Scatter en las gráficas.
 import plotly._
+import element._
 import layout._
 import Plotly._
 

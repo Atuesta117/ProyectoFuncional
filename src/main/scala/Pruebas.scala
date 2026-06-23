@@ -1,9 +1,10 @@
 import Comete._
 import Opinion._
 import common._
+
+// Objeto principal de pruebas del proyecto.
+// Se movió a src/main/scala para poder ejecutarlo con: sbt "runMain Pruebas"
 object Pruebas extends App {
-
-
 
 //-------------------Pruebas rho ------------------------
   //Funciones de creencias genericas de prueba
@@ -146,11 +147,15 @@ println(res25);
 
 
   //-----------------Fin Pruebas showWeightedGraph ------------------------
-  
 
 
 
-  //--------------------Inicio Pruebas confBiasUpdate----------------------
+  //-------------------- 2.3.2 — Pruebas confBiasUpdate (Jhonnier) --------------------
+  // Verifica la actualización de creencias con el grafo i1 de 10 agentes.
+  // Se comparan las polarizaciones antes y después de actualizar.
+  // Valores esperados del enunciado:
+  //   uniforme: rho antes ~0.383, después ~0.38
+  //   mildly:   rho antes y después ~0.435
   println("Pruebas de confBiasUpdate");
   val sbu_10 = uniformBelief(10)
   println(confBiasUpdate(sbu_10, i1_10))
@@ -161,8 +166,26 @@ println(res25);
   println(confBiasUpdate(sbm_10, i1_10))
   println(rho1(sbm_10, dist1))
   println(rho1(confBiasUpdate(sbm_10, i1_10), dist1))
-  
+
 
   //-------------------Fin Pruebas confBiasUpdate----------------------
+
+  //-------------------- 2.3.3 — Pruebas simulate (Jhonnier) --------------------
+  // Simula 2 pasos de tiempo (t=2) y calcula la polarización en cada instante.
+  // for-comprehension: recorre cada creencia de la secuencia devuelta por simulate
+  // y empareja (creencia, polarización) como en el ejemplo del enunciado.
+  // Valores esperados (creencia uniforme): 0.383 -> 0.38 -> 0.335
+  // Valores esperados (creencia mildly):    0.435 -> 0.435 -> 0.377
+  println("Pruebas de simulate")
+  val evolUniforme = for {
+    b <- simulate(confBiasUpdate, i1_10, sbu_10, 2)
+  } yield (b, rho1(b, dist1))
+  evolUniforme.foreach(println)
+
+  val evolMidly = for {
+    b <- simulate(confBiasUpdate, i1_10, sbm_10, 2)
+  } yield (b, rho1(b, dist1))
+  evolMidly.foreach(println)
+  //--------------------Fin Pruebas simulate----------------------
 
 }
