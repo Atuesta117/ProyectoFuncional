@@ -80,37 +80,80 @@ package object Opinion {
 
 
 
-def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
-  val (wg, nags) = swg
-  (for {
-    i <- 0 until nags
-  } yield {
-    val Ai = for {
-      j <- 0 until nags
-      if wg(j, i) > 0
-    } yield j
+  // -------------------- 2.3.2 y 2.3.3 — Jhonnier --------------------
+  // Sección dinámica del modelo: actualización de creencias y simulación.
 
-    Ai match {
-      case ai if ai.isEmpty => b(i)
-      case ai =>
-        val sumatoria = (for {
-          j <- ai
-        } yield {
-          val conf_IJ = 1 - math.abs(b(j) - b(i))
-          val influencia = wg(j, i)
-          conf_IJ * influencia * (b(j) - b(i))
-        }).sum
-        b(i) + (sumatoria / ai.length)
-    }
-  }).toVector
-}
-  
+  // Tipo de función de alto orden para representar cualquier regla de actualización.
+  // Recibe la creencia actual y el grafo, y devuelve la creencia del siguiente paso.
+  // Se usa en simulate para poder pasar confBiasUpdate (u otra regla) como parámetro.
+  type FunctionUpdate =
+    (SpecificBelief, SpecificWeightedGraph) => SpecificBelief
 
+  // 2.3.2 — Actualización con sesgo de confirmación (Confirmation Bias).
+  //
+  // Fórmula del enunciado, para cada agente i:
+  //   nb(i) = b(i) + sum_{j in Ai} beta_ij * I(j,i) * (b(j) - b(i)) / |Ai|
+  // donde:
+  //   Ai     = agentes j con influencia positiva sobre i  (wg(j,i) > 0)
+  //   beta_ij = 1 - |b(j) - b(i)|  (más confianza si las opiniones son cercanas)
+  //   I(j,i)  = peso del grafo wg(j,i)
+  //
+  // Técnicas usadas:
+  //   - for-comprehension: recorre cada agente i (iterador)
+  //   - pattern matching: si Ai está vacío, la creencia no cambia
+  //   - inmutabilidad: se construye un nuevo Vector, no se modifica b
+  def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+    val (wg, nags) = swg
+    (for {
+      i <- 0 until nags
+    } yield {
+      // Conjunto Ai: índices de agentes que influyen en i
+      val Ai = for {
+        j <- 0 until nags
+        if wg(j, i) > 0
+      } yield j
 
+      Ai match {
+        case ai if ai.isEmpty => b(i)
+        case ai =>
+          val sumatoria = (for {
+            j <- ai
+          } yield {
+            val beta_ij = 1 - math.abs(b(j) - b(i))
+            beta_ij * wg(j, i) * (b(j) - b(i))
+          }).sum
+          b(i) + sumatoria / ai.length
+      }
+    }).toVector
+  }
 
+  // 2.3.3 — Simulación de la evolución de la polarización.
+  //
+  // Aplica la función de actualización fu, t veces sobre la creencia inicial b0:
+  //   b0  -> creencia en t=0
+  //   b1  = fu(b0, swg)
+  //   b2  = fu(b1, swg)
+  //   ...
+  //   bt  = fu(b_{t-1}, swg)
+  //
+  // Devuelve IndexedSeq con t+1 creencias (desde t=0 hasta t=t).
+  //
+  // Técnicas usadas:
+  //   - recursión con función auxiliar aux (requerido por el curso)
+  //   - acumulador acc: va guardando cada creencia intermedia sin mutar estado
+  //   - caso base k > t: detiene la recursión y devuelve el historial
+  def simulate(fu: FunctionUpdate,
+               swg: SpecificWeightedGraph,
+               b0: SpecificBelief,
+               t: Int): IndexedSeq[SpecificBelief] = {
+    def aux(b: SpecificBelief, k: Int, acc: Vector[SpecificBelief]): Vector[SpecificBelief] =
+      if (k > t) acc
+      else aux(fu(b, swg), k + 1, acc :+ b)
 
+    if (t < 0) Vector.empty
+    else aux(b0, 0, Vector.empty)
+  }
 
-
-
+  // -------------------- Fin 2.3.2 y 2.3.3 --------------------
 
 }
