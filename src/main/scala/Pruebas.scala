@@ -1,7 +1,7 @@
 import Comete._
 import Opinion._
 import common._
-
+import Benchmark._
 // Objeto principal de pruebas del proyecto.
 // Se movió a src/main/scala para poder ejecutarlo con: sbt "runMain Pruebas"
 object Pruebas extends App {
@@ -188,4 +188,24 @@ println(res25);
   evolMidly.foreach(println)
   //--------------------Fin Pruebas simulate----------------------
 
+
+
+  //------------------------Comparaciones confBiasUpdate y confBiasUpdatePar-------
+
+  val likert5 = Vector(0.0, 0.25, 0.5, 0.75, 1.0)
+
+  val sbms = for {
+    n <- 2 until 16
+    nags = math.pow(2, n).toInt
+  } yield midlyBelief(nags)
+
+  val i132768 = i1(32768)
+  val i232768 = i2(32768)
+println("comparacion -------------------")
+  println(compararFuncionesAct(
+    sbms.take(sbms.length / 2),
+    i232768,
+    confBiasUpdate,
+    confBiasUpdatePar
+  ));
 }

@@ -103,12 +103,25 @@ package object Opinion {
   //   - pattern matching: si Ai está vacío, la creencia no cambia
   //   - inmutabilidad: se construye un nuevo Vector, no se modifica b
 //Version paralela
-def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+def confBiasUpdate(
+    b: SpecificBelief,
+    swg: SpecificWeightedGraph
+): SpecificBelief = {
 
   val (wg, nags) = swg
 
   val is = (0 until nags).toVector
   val js = (0 until nags).toVector
+  def sumaAi(Ai: Vector[Int], i: Int): Double = {
+    Ai match {
+      case Vector() => 0.0
+      case _ =>
+        val j = Ai.head
+        val resto = Ai.tail
+        val beta_ij = 1 - math.abs(b(j) - b(i))
+        beta_ij * wg(j, i) * (b(j) - b(i)) + sumaAi(resto, i)
+    }
+  }
 
   def calcNuevaCreencia(
       i: Int,
@@ -123,13 +136,11 @@ def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelie
         if wg(j, i) > 0
       } yield j
 
-    if (Ai.isEmpty) b(i)
+    if (Ai.isEmpty)
+      b(i)
     else {
-      val sumatoria =
-        Ai.map { j =>
-          val beta_ij = 1 - math.abs(b(j) - b(i))
-          beta_ij * wg(j, i) * (b(j) - b(i))
-        }.sum
+
+      val sumatoria = sumaAi(Ai, i)
 
       b(i) + sumatoria / Ai.length
     }
@@ -149,9 +160,7 @@ def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelie
   }
 
   aux(is)
-}
-
-  
+}  
 
   // 2.3.3 — Simulación de la evolución de la polarización.
   //
@@ -187,59 +196,98 @@ def confBiasUpdate(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelie
 
   // 2.4.2 Paralelizando el caluclo de la actualizacion de una creencia --------------------
   //confBiasUpdatePar
-  def confBiasUpdatePar(b: SpecificBelief, swg: SpecificWeightedGraph): SpecificBelief = {
+def confBiasUpdatePar(
+    b: SpecificBelief,
+    swg: SpecificWeightedGraph
+): SpecificBelief = {
 
-    val (wg, nags) = swg
+  val (wg, nags) = swg
 
-    val is = (0 until nags).toVector
-    val js = (0 until nags).toVector
+  val is = (0 until nags).toVector
+  val js = (0 until nags).toVector
 
-    def calcNuevaCreencia(
-                           i: Int,
-                           b: SpecificBelief,
-                           wg: WeightedGraph,
-                           js: Vector[Int]
-                         ): Double = {
+  def sumaAiPar(Ai: Vector[Int], i: Int): Double = {
 
-      val Ai =
-        for {
-          j <- js
-          if wg(j, i) > 0
-        } yield j
+    val n = Ai.length
 
-      if (Ai.isEmpty) b(i)
-      else {
-        val sumatoria =
-          Ai.map { j =>
-            val beta_ij = 1 - math.abs(b(j) - b(i))
-            beta_ij * wg(j, i) * (b(j) - b(i))
-          }.sum
+    if (n == 0)
+      0.0
 
-        b(i) + sumatoria / Ai.length
-      }
-    }
+    else if (n == 1) {
 
-    def aux(is: Vector[Int]): Vector[Double] = {
+      val j = Ai(0)
 
-      val n = is.length
+      val beta_ij =
+        1 - math.abs(b(j) - b(i))
+
+      beta_ij * wg(j, i) * (b(j) - b(i))
+
+    } else {
+
       val m = n / 2
 
-      if (n == 0)
-        Vector.empty
+      val (izq, der) = parallel(
+        sumaAiPar(Ai.slice(0, m), i),
+        sumaAiPar(Ai.slice(m, n), i)
+      )
 
-      else if (n == 1)
-        Vector(calcNuevaCreencia(is(0), b, wg, js))
-
-      else {
-        val (izq, der) = parallel(
-          aux(is.slice(0, m)),
-          aux(is.slice(m, n))
-        )
-
-        izq ++ der
-      }
+      izq + der
     }
-
-    aux(is)
   }
+
+  def calcNuevaCreencia(
+      i: Int,
+      b: SpecificBelief,
+      wg: WeightedGraph,
+      js: Vector[Int]
+  ): Double = {
+
+    val Ai =
+      for {
+        j <- js
+        if wg(j, i) > 0
+      } yield j
+
+    if (Ai.isEmpty)
+      b(i)
+    else {
+
+      val sumatoria = sumaAiPar(Ai, i)
+
+      b(i) + sumatoria / Ai.length
+    }
+  }
+
+  def aux(is: Vector[Int]): Vector[Double] = {
+
+    val n = is.length
+
+    if (n == 0)
+      Vector.empty
+
+    else if (n == 1)
+      Vector(
+        calcNuevaCreencia(
+          is(0),
+          b,
+          wg,
+          js
+        )
+      )
+
+    else {
+
+      val m = n / 2
+
+      val (izq, der) = parallel(
+        aux(is.slice(0, m)),
+        aux(is.slice(m, n))
+      )
+
+      izq ++ der
+    }
+  }
+
+  aux(is)
+}
 }
