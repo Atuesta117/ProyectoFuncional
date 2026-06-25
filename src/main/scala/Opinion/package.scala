@@ -108,20 +108,12 @@ def confBiasUpdate(
     swg: SpecificWeightedGraph
 ): SpecificBelief = {
 
-  val (wg, nags) = swg
+  val (wg, _) = swg
+  val n = b.length
 
-  val is = (0 until nags).toVector
-  val js = (0 until nags).toVector
-  def sumaAi(Ai: Vector[Int], i: Int): Double = {
-    Ai match {
-      case Vector() => 0.0
-      case _ =>
-        val j = Ai.head
-        val resto = Ai.tail
-        val beta_ij = 1 - math.abs(b(j) - b(i))
-        beta_ij * wg(j, i) * (b(j) - b(i)) + sumaAi(resto, i)
-    }
-  }
+
+  val is = (0 until n).toVector
+  val js = (0 until n).toVector
 
   def calcNuevaCreencia(
       i: Int,
@@ -140,7 +132,11 @@ def confBiasUpdate(
       b(i)
     else {
 
-      val sumatoria = sumaAi(Ai, i)
+      val sumatoria =
+        Ai.map { j =>
+          val beta_ij = 1 - math.abs(b(j) - b(i))
+          beta_ij * wg(j, i) * (b(j) - b(i))
+        }.sum
 
       b(i) + sumatoria / Ai.length
     }
@@ -160,7 +156,7 @@ def confBiasUpdate(
   }
 
   aux(is)
-}  
+}
 
   // 2.3.3 — Simulación de la evolución de la polarización.
   //
@@ -201,34 +197,29 @@ def confBiasUpdatePar(
     swg: SpecificWeightedGraph
 ): SpecificBelief = {
 
-  val (wg, nags) = swg
+  val (wg, _) = swg
+  val nags = b.length
 
   val is = (0 until nags).toVector
   val js = (0 until nags).toVector
 
-  def sumaAiPar(Ai: Vector[Int], i: Int): Double = {
+  def sumaPar(valores: Vector[Double]): Double = {
 
-    val n = Ai.length
+    val n = valores.length
 
     if (n == 0)
       0.0
 
-    else if (n == 1) {
+    else if (n == 1)
+      valores(0)
 
-      val j = Ai(0)
-
-      val beta_ij =
-        1 - math.abs(b(j) - b(i))
-
-      beta_ij * wg(j, i) * (b(j) - b(i))
-
-    } else {
+    else {
 
       val m = n / 2
 
       val (izq, der) = parallel(
-        sumaAiPar(Ai.slice(0, m), i),
-        sumaAiPar(Ai.slice(m, n), i)
+        sumaPar(valores.slice(0, m)),
+        sumaPar(valores.slice(m, n))
       )
 
       izq + der
@@ -252,7 +243,13 @@ def confBiasUpdatePar(
       b(i)
     else {
 
-      val sumatoria = sumaAiPar(Ai, i)
+      val contribuciones =
+        Ai.map { j =>
+          val beta_ij = 1 - math.abs(b(j) - b(i))
+          beta_ij * wg(j, i) * (b(j) - b(i))
+        }
+
+      val sumatoria = sumaPar(contribuciones)
 
       b(i) + sumatoria / Ai.length
     }
