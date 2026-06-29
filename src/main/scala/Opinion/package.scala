@@ -192,7 +192,7 @@ def confBiasUpdate(
   //------------------2.4 Acelerando la simulacion con paralelismo de tareas y de datos---------------------
 
 // Rho Paralelismo---------------------------------
-def rhoParallel(alpha: Double, beta: Double): AgentsPolMeasure = {
+def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
     (sb: SpecificBelief, d: DistributionValues) => {
       val k = d.length
       val n = sb.length
