@@ -1,18 +1,25 @@
 import Comete.DistributionValues
 import Opinion._
 import org.scalameter._
-// Imports de Plotly para simEvolucion (gráficos de evolución de polarización).
-// element._ es necesario para usar Scatter en las gráficas.
 import plotly._
 import element._
 import layout._
 import Plotly._
 
-package object Benchmark {
-  def tiempoDe[T](body: => T) = {
+package object Benchmark {  def tiempoDe[T](body: => T) = {
     val timeA1 = config(
-      KeyValue(Key.exec.minWarmupRuns -> 20),
-      KeyValue(Key.exec.maxWarmupRuns -> 60),
+      KeyValue(Key.exec.minWarmupRuns -> 5),
+      KeyValue(Key.exec.maxWarmupRuns -> 15),
+      KeyValue(Key.verbose -> false)
+    ) withWarmer(new Warmer.Default) measure (body)
+    timeA1
+  }
+
+  // Menos warmups para simulate (10 pasos × n agentes es muy costoso)
+  def tiempoDePesado[T](body: => T) = {
+    val timeA1 = config(
+      KeyValue(Key.exec.minWarmupRuns -> 2),
+      KeyValue(Key.exec.maxWarmupRuns -> 5),
       KeyValue(Key.verbose -> false)
     ) withWarmer(new Warmer.Default) measure (body)
     timeA1
@@ -109,32 +116,56 @@ package object Benchmark {
     } yield (b.length, t1, t2, t1.value/t2.value)
   }
 
+  // Comparador de tiempos de simulación completa secuencial y paralela
+  def compararSimulacion(sb: Seq[SpecificBelief], swg: SpecificWeightedGraph, pasos: Int,
+                         f1: FunctionUpdate, f2: FunctionUpdate) = {
+    sb.map { b =>
+      val n = b.length
+      println(s"   midiendo n=$n ($pasos pasos)...")
+      Console.out.flush()
+      val t1 = tiempoDePesado(simulate(f1, swg, b, pasos))
+      val t2 = tiempoDePesado(simulate(f2, swg, b, pasos))
+      val acel = t1.value / t2.value
+      println(f"   n=$n%4d  t_sec=${t1.value}%10.4f ms  t_par=${t2.value}%10.4f ms  acel=$acel%.4f")
+      Console.out.flush()
+      (n, pasos, t1, t2, acel)
+    }
+  }
 
-  // Simulador de evolución de opinión
-  def simEvolucion(sb:Seq[SpecificBelief],swg:SpecificWeightedGraph,
-                    tiempoSim:Int, pol:AgentsPolMeasure, fu:FunctionUpdate,
-                   dist:DistributionValues,name:String) = {
-    // Recibe una secuencia de opiniones iniciales de agentes sb,
-    // todas las opiniones del mismo tamaño, un grafo de influencia swg,
-    // El número de pasos de la simulación, tiempoSim,
-    // una medida de polarización de agentes, pol, una función de actualización
-    // de la oopinión, fu, unos valores de distribución, dist y
-    // un nombre,name, para el archivo html de salida,
-    // y dibuja en un archivo la evolución en el rtiempo de la polarización
-    // de los agentes iniciando en cada una de las opiniones iniciales
-    val ejet = 1 to tiempoSim
+  // Evolución de polarización (enunciado 2.4.3) — una función de actualización
+  def simEvolucion(sb: Seq[SpecificBelief], swg: SpecificWeightedGraph,
+                   tiempoSim: Int, pol: AgentsPolMeasure, fu: FunctionUpdate,
+                   dist: DistributionValues, name: String) = {
+    val ejet = 0 to tiempoSim
     val evolPols = for {
       i <- 0 until sb.length
-    } yield {for {
-      b <- simulate(fu,swg,sb(i),tiempoSim)
-    } yield pol(b,dist)
+    } yield {
+      for {
+        b <- simulate(fu, swg, sb(i), tiempoSim)
+      } yield pol(b, dist)
     }
     val plotSim = for {
       i <- 0 until sb.length
-    } yield Scatter(ejet, evolPols(i)).withName(name ++ "-" ++ i.toString)
+    } yield Scatter(ejet, evolPols(i)).withName(name + "-creencia-" + i.toString)
 
-    val laySimSeq = Layout().withTitle(name)
-    plotSim.plot("simulEvol.html", laySimSeq)
+    plotSim.plot(name + ".html", Layout().withTitle(name))
     evolPols
+  }
+
+  // Evolución de polarización comparando simulate secuencial vs paralelo en el mismo gráfico
+  def simEvolucionComparativa(creencias: Seq[SpecificBelief], swg: SpecificWeightedGraph,
+                              tiempoSim: Int, pol: AgentsPolMeasure,
+                              fuSec: FunctionUpdate, fuPar: FunctionUpdate,
+                              dist: DistributionValues, name: String): Unit = {
+    val ejet = 0 to tiempoSim
+    val trazas = creencias.zipWithIndex.flatMap { case (b0, i) =>
+      val polSec = simulate(fuSec, swg, b0, tiempoSim).map(pol(_, dist))
+      val polPar = simulate(fuPar, swg, b0, tiempoSim).map(pol(_, dist))
+      Seq(
+        Scatter(ejet, polSec).withName("secuencial-" + i.toString),
+        Scatter(ejet, polPar).withName("paralelo-" + i.toString)
+      )
+    }
+    trazas.plot(name + ".html", Layout().withTitle(name))
   }
 }

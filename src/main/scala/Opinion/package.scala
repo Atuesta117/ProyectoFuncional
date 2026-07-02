@@ -103,8 +103,7 @@ package object Opinion {
   //   - for-comprehension: recorre cada agente i (iterador)
   //   - pattern matching: si Ai está vacío, la creencia no cambia
   //   - inmutabilidad: se construye un nuevo Vector, no se modifica b
-//Version paralela
-def confBiasUpdate(
+  def confBiasUpdate(
     b: SpecificBelief,
     swg: SpecificWeightedGraph
 ): SpecificBelief = {
@@ -199,7 +198,7 @@ def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
 
       // Paralelizamos tanto la iteración sobre los intervalos (k) 
       // como el conteo sobre las creencias (n) usando .par
-      val pi = Vector.tabulate(k).par.map { i =>
+      val pi = (0 until k).toVector.par.map { i =>
         val count = sb.par.count { v => 
           if (i == 0) v >= 0.0 && v < d(1) / 2.0
           else if (i == k - 1) v >= (d(k - 2) + d(k - 1)) / 2.0 && v <= 1.0
@@ -276,7 +275,7 @@ def confBiasUpdatePar(
           beta_ij * wg(j, i) * (b(j) - b(i))
         }
 
-      val sumatoria = sumaPar(contribuciones)
+      val sumatoria = sumaPar(contribuciones.toVector)
 
       b(i) + sumatoria / Ai.length
     }
