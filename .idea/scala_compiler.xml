@@ -2,6 +2,10 @@
 <project version="4">
   <component name="ScalaCompilerConfiguration">
     <option name="separateProdTestSources" value="true" />
-    <profile name="sbt 1" modules="ProyectoFuncional,ProyectoFuncional.main,ProyectoFuncional.test,untitled,untitled.main,untitled.test" />
+    <profile name="sbt 1" modules="ProyectoFuncional,ProyectoFuncional.main,ProyectoFuncional.test,Taller Paralelismo de Tareas y Datos,untitled,untitled.main,untitled.test" />
+    <profile name="sbt 2" modules="Taller Paralelismo de Tareas y Datos.main,Taller Paralelismo de Tareas y Datos.test">
+      <option name="implicitConversions" value="true" />
+      <option name="deprecationWarnings" value="true" />
+    </profile>
   </component>
 </project>
