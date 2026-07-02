@@ -218,99 +218,48 @@ def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
 // Fin Rho paralelismo-----------------------------
   // 2.4.2 Paralelizando el caluclo de la actualizacion de una creencia --------------------
   //confBiasUpdatePar
-def confBiasUpdatePar(
-    b: SpecificBelief,
-    swg: SpecificWeightedGraph
-): SpecificBelief = {
 
-  val (wg, _) = swg
-  val nags = b.length
 
-  val is = (0 until nags).toVector
-  val js = (0 until nags).toVector
+  def confBiasUpdatePar(
+                         b: SpecificBelief,
+                         swg: SpecificWeightedGraph
+                       ): SpecificBelief = {
+    val (wg, _) = swg
+    val nags = b.length
+    val is = (0 until nags).toVector
+    val js = (0 until nags).toVector
 
-  def sumaPar(valores: Vector[Double]): Double = {
+    def calcNuevaCreencia(
+                           i: Int,
+                           b: SpecificBelief,
+                           wg: WeightedGraph,
+                           js: Vector[Int]
+                         ): Double = {
+      val Ai =
+        for {
+          j <- js
+          if wg(j, i) > 0
+        } yield j
 
-    val n = valores.length
+      if (Ai.isEmpty)
+        b(i)
+      else {
+        val contribuciones =
+          Ai.map { j =>
+            val beta_ij = 1 - math.abs(b(j) - b(i))
+            beta_ij * wg(j, i) * (b(j) - b(i))
+          }
 
-    if (n == 0)
-      0.0
+        // paralelismo de datos en la sumatoria
+        val sumatoria = contribuciones.par.foldLeft(0.0)(_ + _)
 
-    else if (n == 1)
-      valores(0)
-
-    else {
-
-      val m = n / 2
-
-      val (izq, der) = parallel(
-        sumaPar(valores.slice(0, m)),
-        sumaPar(valores.slice(m, n))
-      )
-
-      izq + der
+        b(i) + sumatoria / Ai.length
+      }
     }
+
+    // paralelismo de datos también sobre los agentes
+    is.par.map { i =>
+      calcNuevaCreencia(i, b, wg, js)
+    }.toVector
   }
-
-  def calcNuevaCreencia(
-      i: Int,
-      b: SpecificBelief,
-      wg: WeightedGraph,
-      js: Vector[Int]
-  ): Double = {
-
-    val Ai =
-      for {
-        j <- js
-        if wg(j, i) > 0
-      } yield j
-
-    if (Ai.isEmpty)
-      b(i)
-    else {
-
-      val contribuciones =
-        Ai.map { j =>
-          val beta_ij = 1 - math.abs(b(j) - b(i))
-          beta_ij * wg(j, i) * (b(j) - b(i))
-        }
-
-      val sumatoria = sumaPar(contribuciones.toVector)
-
-      b(i) + sumatoria / Ai.length
-    }
-  }
-
-  def aux(is: Vector[Int]): Vector[Double] = {
-
-    val n = is.length
-
-    if (n == 0)
-      Vector.empty
-
-    else if (n == 1)
-      Vector(
-        calcNuevaCreencia(
-          is(0),
-          b,
-          wg,
-          js
-        )
-      )
-
-    else {
-
-      val m = n / 2
-
-      val (izq, der) = parallel(
-        aux(is.slice(0, m)),
-        aux(is.slice(m, n))
-      )
-
-      izq ++ der
-    }
-  }
-
-  aux(is)
-}
 }
