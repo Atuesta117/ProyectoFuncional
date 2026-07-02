@@ -220,6 +220,8 @@ def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
   //confBiasUpdatePar
 
 
+  import scala.collection.parallel.CollectionConverters._
+
   def confBiasUpdatePar(
                          b: SpecificBelief,
                          swg: SpecificWeightedGraph
@@ -240,7 +242,6 @@ def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
           j <- js
           if wg(j, i) > 0
         } yield j
-
       if (Ai.isEmpty)
         b(i)
       else {
@@ -249,17 +250,29 @@ def rhoPar(alpha: Double, beta: Double): AgentsPolMeasure = {
             val beta_ij = 1 - math.abs(b(j) - b(i))
             beta_ij * wg(j, i) * (b(j) - b(i))
           }
-
-        // paralelismo de datos en la sumatoria
+        // paralelismo de DATOS: la sumatoria usa .par
         val sumatoria = contribuciones.par.foldLeft(0.0)(_ + _)
-
         b(i) + sumatoria / Ai.length
       }
     }
 
-    // paralelismo de datos también sobre los agentes
-    is.par.map { i =>
-      calcNuevaCreencia(i, b, wg, js)
-    }.toVector
+    def aux(is: Vector[Int]): Vector[Double] = {
+      val n = is.length
+      if (n == 0)
+        Vector.empty
+      else if (n == 1)
+        Vector(calcNuevaCreencia(is(0), b, wg, js))
+      else {
+        val m = n / 2
+        // paralelismo de TAREAS: división manual con parallel()
+        val (izq, der) = parallel(
+          aux(is.slice(0, m)),
+          aux(is.slice(m, n))
+        )
+        izq ++ der
+      }
+    }
+
+    aux(is)
   }
 }
